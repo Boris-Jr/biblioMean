@@ -4,7 +4,7 @@ const registerSupplier = async (req, res) => {
   if (!req.body.name || !req.body.address)
     return res.status(400).send("Incomplete data");
 
-  const existingSupplier = await supplier.findOne({ name: req.body.namw });
+  const existingSupplier = await supplier.findOne({ name: req.body.name });
   if (existingSupplier)
     return res.status(400).send("Supplier already existing");
 
@@ -27,4 +27,36 @@ const listSupplier = async (req, res) => {
   return res.status(200).send({ supplierchema });
 };
 
-export default { registerSupplier, listSupplier };
+const findSupplier = async (req, res) => {
+  const supplierId = await supplier.findOne({ _id: req.params["_id"] });
+  if (!supplierId) return res.status(400).send("Supplier not found");
+  return res.status(200).send({ supplierId });
+};
+
+const updateSupplier = async (req, res) => {
+  if (!req.body.name || !req.body.address)
+    return res.status(400).send("Incomplete data");
+
+  const existingSupplier = await supplier.findOne({
+    name: req.body.name,
+    address: req.body.address,
+  });
+  if (existingSupplier)
+    return res.status(400).send("Supplier already existing");
+
+  const supplierUpdate = await supplier.findByIdAndUpdate(req.body._id, {
+    name: req.body.name,
+    address: req.body.address,
+  });
+  if (!supplierUpdate) return res.status(400).send("Failed update");
+  return res.status(200).send({ supplierUpdate });
+};
+
+const deleteSupplier = async (req, res) => {
+  const supplierDelete = await supplier.findByIdAndDelete({ _id: req.params["_id"] });
+  
+  if (!supplierDelete) return res.status(400).send("Failed delete");
+  return res.status(200).send("Supplier deleted")
+};
+
+export default { registerSupplier, listSupplier, findSupplier, deleteSupplier, updateSupplier };

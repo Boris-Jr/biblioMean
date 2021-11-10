@@ -1,3 +1,4 @@
+import book from "../models/book.js";
 import client from "../models/client.js";
 
 const registerClient = async (req, res) => {
@@ -5,7 +6,7 @@ const registerClient = async (req, res) => {
     return res.status(400).send("Incomplete data");
 
   const existingClient = await client.findOne({ email: req.body.email });
-  if (existingClient) return res.status(400).send("User already existing");
+  if (existingClient) return res.status(400).send("client already existing");
 
   const clientSchema = new client({
     name: req.body.name,
@@ -28,4 +29,43 @@ const listClient = async (req, res) => {
   return res.status(200).send({ clientSchema });
 };
 
-export default { registerClient, listClient };
+const updateClient = async (req, res) => {
+  if (!req.body.name || !req.body.email || !req.body.password)
+    return res.status(400).send("Incomplete data");
+
+  const existingClient = await client.findOne({
+    name: req.body.name,
+    email: req.body.email,
+    password: req.body.password,
+  });
+  if (existingClient) return res.status(400).send("Client already existing");
+
+  const clientUpdate = await client.findByIdAndUpdate(req.body._id, {
+    name: req.body.name,
+    email: req.body.email,
+    password: req.body.password,
+  });
+  if (!clientUpdate) return res.status(400).send("Error at editing client");
+  return res.status(200).send({ clientUpdate });
+};
+
+const deleteClient = async (req, res) => {
+  const clientdelete = await client.findByIdAndDelete({
+    _id: req.params["_id"],
+  });
+  if (!clientdelete) return res.status(400).send("Failed deleted");
+  return res.status(200).send("Client deleted");
+};
+const findClient = async (req, res) => {
+  const clientID = await client.findById({ _id: req.params["_id"] });
+  if (!clientID) return res.status(400).send("Not found");
+  return res.status(200).send({ clientID });
+};
+
+export default {
+  registerClient,
+  listClient,
+  updateClient,
+  findClient,
+  deleteClient,
+};
