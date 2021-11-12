@@ -1,17 +1,27 @@
-import book from "../models/book.js";
 import client from "../models/client.js";
+import jwt from "jsonwebtoken";
+import moment from "moment";
+import bcrypt from "bcrypt";
 
 const registerClient = async (req, res) => {
-  if (!req.body.name || !req.body.email || !req.body.password)
+  if (!req.body.name || !req.body.email)
     return res.status(400).send("Incomplete data");
 
   const existingClient = await client.findOne({ email: req.body.email });
   if (existingClient) return res.status(400).send("client already existing");
 
+  let pass = "";
+
+  if (req.body.password) {
+    pass = await bcrypt.hash(req.body.password, 10);
+  } else {
+    pass = existingClient.password;
+  }
+
   const clientSchema = new client({
     name: req.body.name,
     email: req.body.email,
-    password: req.body.password,
+    password: pass,
     bdStatus: true,
   });
 
@@ -62,10 +72,40 @@ const findClient = async (req, res) => {
   return res.status(200).send({ clientID });
 };
 
+const login = async (req, res) => {
+  if (!req.body.email || !req.body.password)
+    return res.status(400).send("Incomplete data");
+
+  const userLogin = await client.findOne({ email: req.body.email });
+  if (!userLogin) return res.status(400).send("Wrong email or password");
+
+  const hash = await bcrypt.compare(req.body.password, userLogin.password);
+
+  if (!hash) return res.status(400).send("Wrong email or password");
+
+  try {
+    return res.status(400).json({
+      token: jwt.sign(
+        {
+          _id: userLogin._id,
+          name: userLogin.name,
+          email: userLogin.email,
+          password: userLogin.password,
+          iat: moment().unix(),
+        },
+        process.env.SK_JWT
+      ),
+    });
+  } catch (e) {
+    return res.status(400).send({ message: "Failed internal at login" });
+  }
+};
+
 export default {
   registerClient,
   listClient,
   updateClient,
   findClient,
   deleteClient,
+  login,
 };
