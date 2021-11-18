@@ -1,4 +1,5 @@
 import client from "../models/client.js";
+import role from "../models/role.js";
 import jwt from "jsonwebtoken";
 import moment from "moment";
 import bcrypt from "bcrypt";
@@ -18,9 +19,13 @@ const registerClient = async (req, res) => {
     pass = existingClient.password;
   }
 
+  const roleId = await role.findOne({ name: "client" });
+  if (!roleId) return res.status(400).send("Role not found");
+
   const clientSchema = new client({
     name: req.body.name,
     email: req.body.email,
+    roleId: roleId,
     password: pass,
     bdStatus: true,
   });
@@ -40,20 +45,30 @@ const listClient = async (req, res) => {
 };
 
 const updateClient = async (req, res) => {
-  if (!req.body.name || !req.body.email || !req.body.password)
+  if (!req.body.name || !req.body.email || !req.body.roleId)
     return res.status(400).send("Incomplete data");
 
   const existingClient = await client.findOne({
     name: req.body.name,
     email: req.body.email,
+    roleId: req.body.roleId,
     password: req.body.password,
   });
   if (existingClient) return res.status(400).send("Client already existing");
 
+  let pass = "";
+  if (req.body.password) {
+    pass =  await bcrypt.hash(req.body.password, 10);
+  } else {
+    const userFind = await client.findOne({ email: req.body.email });
+    pass = userFind.password;
+  }
+
   const clientUpdate = await client.findByIdAndUpdate(req.body._id, {
     name: req.body.name,
     email: req.body.email,
-    password: req.body.password,
+    roleId: req.body.roleId,
+    password: pass,
   });
   if (!clientUpdate) return res.status(400).send("Error at editing client");
   return res.status(200).send({ clientUpdate });
@@ -90,6 +105,7 @@ const login = async (req, res) => {
           _id: userLogin._id,
           name: userLogin.name,
           email: userLogin.email,
+          roleId: userLogin.roleId,
           password: userLogin.password,
           iat: moment().unix(),
         },
